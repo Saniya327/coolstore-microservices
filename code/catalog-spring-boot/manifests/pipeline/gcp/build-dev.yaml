@@ -1,0 +1,47 @@
+steps:
+  - name: 'maven:3-openjdk-11'
+    dir: 'code/catalog-spring-boot'
+    args:
+      - test
+      - '-f=appsrc/pom.xml'
+    entrypoint: mvn
+  - name: 'maven:3-openjdk-11'
+    dir: 'code/catalog-spring-boot'
+    args:
+      - package
+      - '-f=appsrc/pom.xml'
+      - '-Dmaven.test.skip=true'
+    entrypoint: mvn
+  - name: 'gcr.io/cloud-builders/docker'
+    dir: 'code/catalog-spring-boot'
+    args: 
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/catalog-spring-boot:$SHORT_SHA'
+      - '--build-arg=JAR_FILE=appsrc/target/$_BUILD_ARTIFACT'
+      - '-f' 
+      - 'manifests/pipeline/gcp/Dockerfile'
+      - '.'
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - push
+      - 'gcr.io/$PROJECT_ID/catalog-spring-boot:$SHORT_SHA'
+  - name: 'k8s.gcr.io/kustomize/kustomize:v4.1.0'
+    dir: 'code/catalog-spring-boot/manifests/deploy/dev'
+    entrypoint: '/bin/sh'
+    args:
+      - "-c"
+      - "kustomize edit set image replaceit=gcr.io/$PROJECT_ID/catalog-spring-boot:$SHORT_SHA"
+  - name: 'k8s.gcr.io/kustomize/kustomize:v4.1.0'
+    dir: 'code/catalog-spring-boot/manifests/deploy/dev'
+    args:
+      - "edit"
+      - "set" 
+      - "namespace"
+      - "catalog-spring-boot-$SHORT_SHA"
+  - name: 'gcr.io/cloud-builders/gke-deploy'
+    entrypoint: '/bin/sh'
+    dir: 'code/catalog-spring-boot/manifests/deploy/dev'
+    args:
+      - '-c'
+      - "kustomize build | gke-deploy run -f - -c pdf -l us-east4-a -n catalog-spring-boot-$SHORT_SHA"

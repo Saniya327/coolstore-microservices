@@ -1,0 +1,24 @@
+steps:
+  - name: 'maven:3-openjdk-11'
+    dir: 'appsrc/inventory-quarkus'
+    args:
+      - test
+      - '-f=pom.xml'
+    entrypoint: mvn
+  - name: 'maven:3-openjdk-11'
+    dir: 'appsrc/inventory-quarkus'
+    args:
+      - package
+      - '-f=pom.xml'
+      - '-Dmaven.test.skip=true'
+    entrypoint: mvn
+  - name: 'gcr.io/cloud-builders/docker'
+    dir: 'appsrc/inventory-quarkus'
+    args: 
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/inventory-quarkus'
+      - '--build-arg=JAR_FILE=target/$_BUILD_ARTIFACT'
+      - '-f' 
+      - 'appsrc/inventory-quarkus/gcp/Dockerfile'
+      - '.'

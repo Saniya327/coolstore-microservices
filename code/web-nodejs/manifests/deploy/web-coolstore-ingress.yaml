@@ -1,0 +1,14 @@
+kind: Ingress
+apiVersion: networking.k8s.io/v1beta1
+metadata:
+  name: web
+spec:
+  rules:
+    - host: coolstore.apps.ocp4.cloud.openshift.fr
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              serviceName: web-coolstore
+              servicePort: 8080
